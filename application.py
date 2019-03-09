@@ -46,9 +46,9 @@ def test():
 
 
 
-def resolve_coref():
+def wiki_to_string(filename='wiki_00'):
     nlp = spacy.load('en_coref_md')
-    with open('wiki_00') as f:
+    with open(filename) as f:
         content = f.readlines()
     content = [x.strip() for x in content]
     lines = []
@@ -57,15 +57,10 @@ def resolve_coref():
             lines.append(x)
             lines.append(' ')
     bigString = ''.join(lines)
-    with open('output_no_coref.txt', 'w') as f:
-        f.write(bigString)
-    doc = nlp(bigString)
-
-    if doc._.has_coref:
-        with open('output_coref.txt', 'w') as f:
-            f.write(doc._.coref_resolved)
-    
-    return doc
+    return bigString
+    # with open('output_no_coref.txt', 'w') as f:
+    #     f.write(bigString)
+    # return doc
     
     # lines = [nlp(x) for x in content]
     # for i in range(len(lines)):
@@ -76,8 +71,28 @@ def resolve_coref():
     #     for line in lines:
     #         f.write(line)
 
-def post_process_spacy():
-    text = ""
+def process_spacy():
+    text = wiki_to_string()
+    sentences = text.split(".")
+    nlp = spacy.load("en")
+
+    relationships = []
+
+    for sentence in sentences:
+        doc = nlp(sentence)
+        chunks = list(doc.noun_chunks)
+        subj = [ent for ent in doc.ents if ent.root.dep_ == 'nsubj' and (ent.label_ == "PERSON")]
+        dobj = [chunk for chunk in chunks if chunk.root.dep_ == 'dobj']
+
+        if subj and dobj:
+            start = subj[0].end_char
+            end = dobj[0].start_char
+            if start < end:
+                rel = sentence[start:end].strip()
+                relationships.append((subj[0], rel, dobj[0]))
+    
+    return relationships
+
     """
     split the text to make a list of sentences
     iterate through the list
@@ -110,11 +125,18 @@ def resolve_coref_ours():
     
     for token in coref_doc:
         print(token.text, token.dep_)
-    
+
+
+
+
+
 
 def main():
-    resolve_coref_ours()
-
+    triples = process_spacy()
+    with open('triples.txt', 'w') as f:
+        for t in triples:
+            f.write('%s' % (t,))
+            f.write('\n')
 
 if __name__ == '__main__':
     main()
