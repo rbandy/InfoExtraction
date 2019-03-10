@@ -44,7 +44,11 @@ def test():
     print(text)
     print(doc._.coref_resolved)
 
-
+def nba_to_string(filename='NBA_input.txt'):
+    with open(filename) as f:
+        content = f.readlines()
+    content = [x.strip() + " " for x in content if x.strip() != '' and x.strip()[-1] == '.']
+    return ''.join(content)
 
 def wiki_to_string(filename='wiki_00'):
     #nlp = spacy.load('en_coref_md')
