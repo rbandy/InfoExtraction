@@ -1,6 +1,6 @@
 import spacy
 
-texts = ['Andy Cole and Shearer – with 34 goals in 1993–94 and 1994–95, respectively – scored the most goals to win the Golden Boot when the Premier League was a 42-game season, Mohamed Salah with 32 goals in 2017–18 holds the record for the current 38-game season, while Nicolas Anelka scored the fewest to clinch the award outright, with 19 goals in 2008–09.' , 'The all-time record for lowest number of goals scored to be bestowed the award, however, is 18 goals; this was achieved during the 1997–98 and 1998–99 seasons, when the award was shared between three players both times.', 'The latter season marked the last time the Golden Boot was shared until 2010–11, when Dimitar Berbatov and Carlos Tevez both scored 20 goals that season to tie for the award.', 'Harry Kane recorded the highest goals-to-games ratio to win the award, scoring 29 goals in 30 games in 2016–17 for a rate of 0.97.']   
+#texts = ['Andy Cole and Shearer – with 34 goals in 1993–94 and 1994–95, respectively – scored the most goals to win the Golden Boot when the Premier League was a 42-game season, Mohamed Salah with 32 goals in 2017–18 holds the record for the current 38-game season, while Nicolas Anelka scored the fewest to clinch the award outright, with 19 goals in 2008–09.' , 'The all-time record for lowest number of goals scored to be bestowed the award, however, is 18 goals; this was achieved during the 1997–98 and 1998–99 seasons, when the award was shared between three players both times.', 'The latter season marked the last time the Golden Boot was shared until 2010–11, when Dimitar Berbatov and Carlos Tevez both scored 20 goals that season to tie for the award.', 'Harry Kane recorded the highest goals-to-games ratio to win the award, scoring 29 goals in 30 games in 2016–17 for a rate of 0.97.']   
 
 def part_of_speech():
     global texts
@@ -47,7 +47,7 @@ def test():
 
 
 def wiki_to_string(filename='wiki_00'):
-    nlp = spacy.load('en_coref_md')
+    #nlp = spacy.load('en_coref_md')
     with open(filename) as f:
         content = f.readlines()
     content = [x.strip() for x in content]
@@ -71,12 +71,14 @@ def wiki_to_string(filename='wiki_00'):
     #     for line in lines:
     #         f.write(line)
 
-def process_spacy():
-    text = wiki_to_string()
+def process_spacy(text, nlp):
+    #text = wiki_to_string()
     sentences = text.split(".")
-    nlp = spacy.load("en")
+    #nlp = spacy.load('en_coref_md')
+    #nlp = spacy.load("en")
+    #nlp = spacy.load('en_core_web_sm')
 
-    relationships = []
+    relationships = set()
 
     for sentence in sentences:
         doc = nlp(sentence)
@@ -89,7 +91,7 @@ def process_spacy():
             end = dobj[0].start_char
             if start < end:
                 rel = sentence[start:end].strip()
-                relationships.append((subj[0], rel, dobj[0]))
+                relationships.add((str(subj[0]).lstrip(), rel, str(dobj[0])))
     
     return relationships
 
@@ -117,7 +119,8 @@ def process_spacy():
     
     """
 def resolve_coref_ours():
-    text = """Bob Johnson swims well for UT. He is their fastest athelete."""
+    #text = "Bob Johnson swims well for UT. He is their fastest athelete. He likes swimming."
+    text = "If Bob encounters a pronoun, he should replace it with the most recent subject"
     nlp = spacy.load('en_coref_md')
     doc = nlp(text)
     coref = doc._.coref_resolved
@@ -127,16 +130,14 @@ def resolve_coref_ours():
         print(token.text, token.dep_)
 
 
-
-
-
-
 def main():
-    triples = process_spacy()
-    with open('triples.txt', 'w') as f:
-        for t in triples:
-            f.write('%s' % (t,))
-            f.write('\n')
+    resolve_coref_ours()
+    #triples = process_spacy()
+    #with open('triples.txt', 'w') as f:
+    #    for t in triples:
+    #        f.write('%s' % (t,))
+    #        f.write('\n')
+
 
 if __name__ == '__main__':
     main()
