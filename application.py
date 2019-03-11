@@ -95,7 +95,7 @@ def process_spacy(text, nlp):
             end = dobj[0].start_char
             if start < end:
                 rel = sentence[start:end].strip()
-                relationships.add((str(subj[0]).lstrip(), rel, str(dobj[0])))
+                relationships.add((str(subj[0]).lstrip(), rel.lstrip(), str(dobj[0]).lstrip()))
     
     return relationships
 
