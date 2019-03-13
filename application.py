@@ -77,7 +77,7 @@ def wiki_to_string(filename='wiki_00'):
 
 def process_spacy(text, nlp):
     #text = wiki_to_string()
-    sentences = text.split(".")
+    sentences = text.split(". ")
     #nlp = spacy.load('en_coref_md')
     #nlp = spacy.load("en")
     #nlp = spacy.load('en_core_web_sm')
