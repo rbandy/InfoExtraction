@@ -2,6 +2,7 @@ import spacy
 #from spacy.matcher import PhraseMatcher
 import application
 from difflib import SequenceMatcher
+import csv
 
 #nlp = spacy.load('en_core_web_sm')
 
@@ -33,6 +34,8 @@ def resolve_coref(text, nlp):
             new_text.append(s2)
 
     text = ".".join(new_text)
+    f = open("nba_coref.txt", "w")
+    f.write(text)
     return text
 
 #text = resolve_coref(text)
@@ -85,41 +88,57 @@ def relation_by_verb(text, nlp):
 
     return triples
 
+def extract_openie_triples(filename):
+    triples = set()
+    with open(filename, mode='r') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=";")
+        for row in csv_reader:
+            row[0] = (row[0].split('('))[1].strip()
+            row[1] = row[1].strip()
+            row[-1] = (row[-1].split(')'))[0].strip()
+            triples.add(tuple(row))
+    return triples
+
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
-def compute_confidence(text, nlp, verb_triples, entity_triples):
+def compute_confidence(text, nlp, verb_triples, entity_triples, openie_triples, writer):
     confidences = []
 
     # triples in either but not both sets
-    all_triples = verb_triples ^ entity_triples
+    all_triples = verb_triples ^ entity_triples ^ openie_triples
     for triple in all_triples:
         score = 0.0
-        sub = nlp(triple[0])
-        
-        for token in sub:
-            if token.ent_type_ == "PERSON":
-                score += 0.1/len(sub)
-        
+        # some bad triples from openie contained '.'
+        if '.' not in triple:
+            sub = nlp(triple[0])
+            
+            for token in sub:
+                if token.ent_type_ == "PERSON":
+                    score += 0.1/len(sub)
+            
 
-        rel = triple[1]
-        obj = nlp(triple[2])
-        for token in obj:
-            if token.ent_type_ == "PERSON" or token.ent_type_ == "NORP" \
-            or token.ent_type_ == "FAC" or token.ent_type_ == "ORG" or token.ent_type_ == "GPE":
-                score += 0.1/len(obj)
+            rel = triple[1]
+            obj = nlp(triple[2])
+            for token in obj:
+                if token.ent_type_ == "PERSON" or token.ent_type_ == "NORP" \
+                or token.ent_type_ == "FAC" or token.ent_type_ == "ORG" or token.ent_type_ == "GPE":
+                    score += 0.1/len(obj)
 
-        max_sim = 0.0
-        for t in all_triples:
-            if t != triple:
-                s = similar(str(t), str(triple))
-                max_sim = max(max_sim, s)
-        score += max_sim*0.6
-        confidences.append([score, triple])
-        print([score, triple])
+            # max_sim = 0.0
+            # for t in all_triples:
+            #     if t != triple:
+            #         s = similar(str(t), str(triple))
+            #         max_sim = max(max_sim, s)
+            
+            score += max_sim*0.6
+            if score >= 0.5:
+                writer.writerow(triple + (score,))
+                confidences.append(triple + (score,))
+            #print(triple + (score,))
 
     # triples in both sets
-    exact_matches = verb_triples & entity_triples
+    exact_matches = (verb_triples & entity_triples) | (verb_triples & openie_triples) | (openie_triples & entity_triples)
     print("num exact matches:", len(exact_matches))
     for triple in exact_matches:
         score = 0.0
@@ -136,29 +155,43 @@ def compute_confidence(text, nlp, verb_triples, entity_triples):
 
         # similarity = 1 for exact matches
         score += 0.6
-        confidences.append([score, triple])
-        print([score, triple])
+        writer.writerow(triple + (score,))
+        confidences.append(triple + (score,))
+        #print(triple + (score,))
 
     return confidences
 
 def main():
     nlp = spacy.load('en_coref_md')
-    #nlp = spacy.load('en_core_web_sm')
-    #text = application.wiki_to_string()
-    text = application.nba_to_string()
-    #text = "Izzy is a dog. He likes to run. Spike is a cat. He likes scratch."
-    text = resolve_coref(text, nlp)
-    #doc = nlp(text)
+    file = open("nba_coref.txt", 'r')
+    text = file.read()
 
     verb_triples = relation_by_verb(text, nlp)
-    print("verb", verb_triples)
-    print(len(verb_triples))
+    #print("verb", verb_triples)
+    #print(len(verb_triples))
 
     entity_triples = application.process_spacy(text, nlp)
-    print("entity",entity_triples)
-    print(len(entity_triples))
+    #print("entity",entity_triples)
+    #print(len(entity_triples))
 
-    c = compute_confidence(text, nlp, verb_triples, entity_triples)
+    #openie_triples = extract_openie_triples("openie_output.csv")
+    openie_triples = set()
+    #print("openie",openie_triples)
+    #print(len(openie_triples))
+
+    with open('triples.csv', 'w') as f:
+        writer = csv.writer(f , lineterminator='\n')
+        header = ("entity1", "relation", "entity2", "score")
+
+        c = compute_confidence(text, nlp, verb_triples, entity_triples, openie_triples, writer)
+
+    # with open('triples.csv', 'w') as f:
+    #     writer = csv.writer(f , lineterminator='\n')
+    #     header = ("entity1", "relation", "entity2", "score")
+    #     writer.writerow(header)
+    #     for tup in c:
+    #         writer.writerow(tup)
+        f.close()
 
 if __name__ == '__main__':
     main()
